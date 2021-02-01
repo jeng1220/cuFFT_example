@@ -8,7 +8,7 @@ This is a simple example to demonstrate cuFFT usage. It will run 1D, 2D and 3D F
 $ cd gflags
 $ mkdir build && cd build
 $ cmake -DCMAKE_INSTALL_PREFIX=<path to installed gflags> ..
-$ make
+$ make install
 ```
 2. build the sample (fft.cu)
 ```sh
