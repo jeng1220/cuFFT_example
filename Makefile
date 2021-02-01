@@ -1,2 +1,2 @@
 all:
-	nvcc fft.cu -lcufft -o fft
+	nvcc -g -lineinfo fft.cu -lcufft -o fft

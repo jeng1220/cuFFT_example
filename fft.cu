@@ -22,6 +22,9 @@
 #include <cuda_runtime.h>
 #include <cufft.h>
 #include <cufftXt.h>
+#include <thrust/complex.h>
+#include <thrust/device_vector.h>
+#include <thrust/host_vector.h>
 
 void check(cudaError_t err, int line) {
     if (err != cudaSuccess) {
@@ -37,18 +40,19 @@ void check(cufftResult err, int line) {
     }
 }
 
-int remove_space(char *str) {
+std::string remove_space(char *str) {
     char *ix = str;
     int n = 0;
     while((ix = strchr(ix, ' ')) != NULL) {
         *ix++ = '_';
         n++;
     }
-    return n;
+    std::string name(str);
+    return name + std::string("_");
 }
 
 float my_rand() {
-#if 0
+#if 1
   static float tmp[] = {
     0.088661, 0.719976, 0.355909, 0.268335, 0.216837,
     0.111352, 0.722319, 0.834714, 0.855696, 0.464120, 
@@ -63,77 +67,102 @@ float my_rand() {
 }
 
 #define CHECK(x) check((x), __LINE__)
-#define SIGNAL_SIZE 16384
+
+template <typename T>
+void write(const std::string& fn, T vec) {
+  int dev_id;
+  CHECK(cudaGetDevice(&dev_id));
+  cudaDeviceProp prop;
+  CHECK(cudaGetDeviceProperties(&prop, dev_id));
+  auto dev_name = remove_space(prop.name);
+
+  std::fstream fs;
+  fs.open(dev_name + fn + std::string(".bin"), std::fstream::out);
+  auto* h_ptr = reinterpret_cast<char *>(thrust::raw_pointer_cast(vec.data()));
+  size_t mem_size = vec.size() * sizeof(cufftComplex);
+  fs.write(h_ptr, mem_size);
+  fs.close();
+}
+
+void c2c(int nx, int ny, int nz, int direction, const std::string& fn) {
+  size_t elements = nx * ny * nz;
+  thrust::host_vector< cufftComplex > h_in_signal(elements);
+  for (size_t i = 0; i < elements; ++i) {
+    h_in_signal[i] = cufftComplex{my_rand(), my_rand()};
+  }
+
+  thrust::host_vector< cufftComplex > h_out_signal(elements);
+  thrust::fill(h_out_signal.begin(), h_out_signal.end(), cufftComplex{0.f, 0.f});
+
+  thrust::device_vector< cufftComplex > d_in_signal(elements);
+  d_in_signal = h_in_signal;
+  thrust::device_vector< cufftComplex > d_out_signal(elements);
+  thrust::fill(d_out_signal.begin(), d_out_signal.end(), cufftComplex{0.f, 0.f});
+
+  cufftHandle plan;
+  if (ny == nz && ny == 1) {
+    CHECK(cufftPlan1d(&plan, nx, CUFFT_C2C, 1));
+  }
+  else if (ny != 1 && nz == 1) {
+    CHECK(cufftPlan2d(&plan, nx, ny, CUFFT_C2C));
+  }
+  else if (ny != 1 && nz != 1) {
+    CHECK(cufftPlan3d(&plan, nx, ny, nz, CUFFT_C2C));
+  }
+
+  auto* d_in_ptr = reinterpret_cast<cufftComplex *>(thrust::raw_pointer_cast(d_in_signal.data()));
+  auto* d_out_ptr = reinterpret_cast<cufftComplex *>(thrust::raw_pointer_cast(d_out_signal.data()));
+
+  CHECK(cufftExecC2C(plan, d_in_ptr, d_out_ptr, direction));
+
+  h_out_signal = d_out_signal;
+
+  write(fn, h_out_signal);
+  CHECK(cufftDestroy(plan));
+}
+
+void c2c1d_fwd(int nx) {
+  c2c(nx, 1, 1, CUFFT_FORWARD, std::string(__func__));
+}
+
+void c2c2d_fwd(int nx, int ny) {
+  c2c(nx, ny, 1, CUFFT_FORWARD, std::string(__func__));
+}
+
+void c2c3d_fwd(int nx, int ny, int nz) {
+  c2c(nx, ny, nz, CUFFT_FORWARD, std::string(__func__));
+}
+
+void c2c1d_inv(int nx) {
+  c2c(nx, 1, 1, CUFFT_INVERSE, std::string(__func__));
+}
+
+void c2c2d_inv(int nx, int ny) {
+  c2c(nx, ny, 1, CUFFT_INVERSE, std::string(__func__));
+}
+
+void c2c3d_inv(int nx, int ny, int nz) {
+  c2c(nx, ny, nz, CUFFT_INVERSE, std::string(__func__));
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 //! Run a simple test for CUDA
 ////////////////////////////////////////////////////////////////////////////////
-int main(int argc, char **argv) 
+int main(int argc, char **argv)
 {
   int device = (argc > 1) ? atoi(argv[1]):0;
   cudaDeviceProp prop;
   CHECK(cudaGetDeviceProperties(&prop, device));
-  remove_space(prop.name);
-  printf("GPU=%s\n", prop.name);
+  std::cout << "GPU = " << prop.name << std::endl;
   CHECK(cudaSetDevice(device));
 
-  int width = 8196;
-  int height = 8196;
-  size_t elements = width * height;
+  c2c1d_fwd(100);
+  c2c2d_fwd(100, 100);
+  c2c3d_fwd(100, 100, 100);
 
-  // Allocate host memory for the signal
-  cufftComplex *h_signal = new cufftComplex[elements];
-
-  // Initialize the memory for the signal
-  for (unsigned int i = 0; i < SIGNAL_SIZE; ++i) {
-    h_signal[i].x = my_rand();
-    h_signal[i].y = my_rand();
-  }
-
-  // Allocate device memory for signal
-  cufftComplex *d_signal;
-  size_t mem_size = sizeof(cufftComplex) * elements;
-  CHECK(cudaMalloc(reinterpret_cast<void **>(&d_signal), mem_size));
-  // Copy host memory to device
-  CHECK(cudaMemcpy(d_signal, h_signal, mem_size, cudaMemcpyHostToDevice));
-
-  // CUFFT plan simple API
-  cufftHandle plan;
-  CHECK(cufftPlan2d(&plan, width, height, CUFFT_C2C));
-
-  // Transform signal and kernel
-  CHECK(cufftExecC2C(plan, reinterpret_cast<cufftComplex *>(d_signal),
-    reinterpret_cast<cufftComplex *>(d_signal),
-    CUFFT_FORWARD));
-
-  // Check if kernel execution generated and error
-  CHECK(cudaStreamSynchronize(0));
-  CHECK(cudaGetLastError());
-
-  // Transform signal back
-  CHECK(cufftExecC2C(plan, reinterpret_cast<cufftComplex *>(d_signal),
-    reinterpret_cast<cufftComplex *>(d_signal),
-    CUFFT_INVERSE));
-
-  // Copy device memory to host
-  CHECK(cudaMemcpy(h_signal, d_signal, mem_size,
-    cudaMemcpyDeviceToHost));
-
-  printf("h_signal[0]=%.9f\n", h_signal[0].x);
-  printf("h_signal[0]=%.9f\n", h_signal[0].y);
-  printf("h_signal[100]=%.9f\n", h_signal[100].x);
-  printf("h_signal[100]=%.9f\n", h_signal[100].y);
-  std::fstream fs;
-  fs.open(prop.name, std::fstream::out);
-  fs.write(reinterpret_cast<char *>(h_signal), mem_size);
-  fs.close();
-
-  // Destroy CUFFT context
-  CHECK(cufftDestroy(plan));
-
-  // cleanup memory
-  delete [] h_signal;
-  CHECK(cudaFree(d_signal));
+  c2c1d_inv(100);
+  c2c2d_inv(100, 100);
+  c2c3d_inv(100, 100, 100);
 
   return 0;
 }
