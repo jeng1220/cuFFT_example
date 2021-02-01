@@ -9,22 +9,21 @@
  *
  */
 
-/* Example showing the use of CUFFT for fast 1D-convolution using FFT. */
 
-// includes, system
-#include <cmath>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
 #include <iostream>
 #include <fstream>
-// includes, project
+#include <gflags/gflags.h>
 #include <cuda_runtime.h>
 #include <cufft.h>
 #include <cufftXt.h>
-#include <thrust/complex.h>
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
+
+
+DEFINE_int32(device_id, 0, "The device ID");
+DEFINE_int32(nx, 64, "The transform size in the x dimension");
+DEFINE_int32(ny, 64, "The transform size in the y dimension");
+DEFINE_int32(nz, 64, "The transform size in the z dimension");
 
 void check(cudaError_t err, int line) {
     if (err != cudaSuccess) {
@@ -148,21 +147,22 @@ void c2c3d_inv(int nx, int ny, int nz) {
 ////////////////////////////////////////////////////////////////////////////////
 //! Run a simple test for CUDA
 ////////////////////////////////////////////////////////////////////////////////
-int main(int argc, char **argv)
-{
-  int device = (argc > 1) ? atoi(argv[1]):0;
+int main(int argc, char **argv) {
+  gflags::ParseCommandLineFlags(&argc, &argv, true);
+
+  CHECK(cudaSetDevice(FLAGS_device_id));
+
   cudaDeviceProp prop;
-  CHECK(cudaGetDeviceProperties(&prop, device));
+  CHECK(cudaGetDeviceProperties(&prop, FLAGS_device_id));
   std::cout << "GPU = " << prop.name << std::endl;
-  CHECK(cudaSetDevice(device));
 
-  c2c1d_fwd(100);
-  c2c2d_fwd(100, 100);
-  c2c3d_fwd(100, 100, 100);
+  c2c1d_fwd(FLAGS_nx);
+  c2c2d_fwd(FLAGS_nx, FLAGS_ny);
+  c2c3d_fwd(FLAGS_nx, FLAGS_ny, FLAGS_nz);
 
-  c2c1d_inv(100);
-  c2c2d_inv(100, 100);
-  c2c3d_inv(100, 100, 100);
+  c2c1d_inv(FLAGS_nx);
+  c2c2d_inv(FLAGS_nx, FLAGS_ny);
+  c2c3d_inv(FLAGS_nx, FLAGS_ny, FLAGS_nz);
 
   return 0;
 }
