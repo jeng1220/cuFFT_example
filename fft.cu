@@ -21,6 +21,7 @@
 
 
 DEFINE_int32(device_id, 0, "The device ID");
+DEFINE_int32(batch_size, 1, "The batch size for 1D FFT");
 DEFINE_int32(nx, 64, "The transform size in the x dimension");
 DEFINE_int32(ny, 64, "The transform size in the y dimension");
 DEFINE_int32(nz, 64, "The transform size in the z dimension");
@@ -100,7 +101,7 @@ void c2c(int nx, int ny, int nz, int direction, const std::string& fn) {
 
   cufftHandle plan;
   if (ny == nz && ny == 1) {
-    CHECK(cufftPlan1d(&plan, nx, CUFFT_C2C, 1));
+    CHECK(cufftPlan1d(&plan, nx, CUFFT_C2C, FLAGS_batch_size));
   }
   else if (ny != 1 && nz == 1) {
     CHECK(cufftPlan2d(&plan, nx, ny, CUFFT_C2C));
