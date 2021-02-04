@@ -48,7 +48,7 @@ std::string remove_space(char *str) {
         n++;
     }
     std::string name(str);
-    return name + std::string("_");
+    return name;
 }
 
 float my_rand() {
@@ -76,8 +76,12 @@ void write(const std::string& fn, T vec) {
   CHECK(cudaGetDeviceProperties(&prop, dev_id));
   auto dev_name = remove_space(prop.name);
 
+  std::string cufft_ver("_cuFFT_");
+  cufft_ver += std::to_string(CUFFT_VERSION);
+  cufft_ver += std::string("_");
+
   std::fstream fs;
-  fs.open(dev_name + fn + std::string(".bin"), std::fstream::out);
+  fs.open(dev_name + cufft_ver + fn + std::string(".bin"), std::fstream::out);
   auto* h_ptr = reinterpret_cast<char *>(thrust::raw_pointer_cast(vec.data()));
   size_t mem_size = vec.size() * sizeof(cufftComplex);
   fs.write(h_ptr, mem_size);

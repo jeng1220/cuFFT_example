@@ -1,3 +1,13 @@
+ifeq ($(CUDA),)
+  $(info "set CUDA to default path:/usr/local/cuda")
+  CUDA=/usr/local/cuda
+endif
+
+ifeq ($(GFLAGS),)
+  $(info "set GFLAGS to default path:`pwd`/gflags/build/install")
+  GFLAGS=`pwd`/gflags/build/install
+endif
+
 all:fft cmp
 
 fft:fft.cu
