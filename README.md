@@ -26,7 +26,7 @@ $ GFLAGS=`pwd`/gflags/build/install CUDA=/usr/local/cuda make
 
 # run #
 
-fft
+fft, run 1D, 2D and 3D FFT on GPU
 ```sh
 $ fft --help
   Flags from fft.cu:
@@ -36,7 +36,7 @@ $ fft --help
     -ny (The transform size in the y dimension) type: int32 default: 64
     -nz (The transform size in the z dimension) type: int32 default: 64
 ```
-cmp:
+cmp, compare results
 ```sh
 $ cmp --help
   Flags from cmp.cpp:
