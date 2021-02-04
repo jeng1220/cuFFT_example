@@ -78,10 +78,16 @@ void write(const std::string& fn, T vec) {
 
   std::string cufft_ver("_cuFFT_");
   cufft_ver += std::to_string(CUFFT_VERSION);
+  cufft_ver += std::to_string(CUFFT_VER_BUILD);
   cufft_ver += std::string("_");
 
+  std::string nvcc_ver("_NVCC_");
+  nvcc_ver += std::to_string(__CUDACC_VER_MAJOR__);
+  nvcc_ver += std::to_string(__CUDACC_VER_MINOR__);
+  nvcc_ver += std::to_string(__CUDACC_VER_BUILD__);
+
   std::fstream fs;
-  fs.open(dev_name + cufft_ver + fn + std::string(".bin"), std::fstream::out);
+  fs.open(dev_name + nvcc_ver + cufft_ver + fn + std::string(".bin"), std::fstream::out);
   auto* h_ptr = reinterpret_cast<char *>(thrust::raw_pointer_cast(vec.data()));
   size_t mem_size = vec.size() * sizeof(cufftComplex);
   fs.write(h_ptr, mem_size);
