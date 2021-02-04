@@ -17,5 +17,5 @@ cmp:cmp.cpp
 	g++ -g -I$(GFLAGS)/include cmp.cpp -L$(GFLAGS)/lib -lgflags -lpthread -o cmp
 
 clean:
-	rm -f fft
+	rm -f fft cmp
 
