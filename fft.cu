@@ -9,7 +9,7 @@
  *
  */
 
-
+#include <cassert>
 #include <iostream>
 #include <fstream>
 #include <gflags/gflags.h>
@@ -85,7 +85,9 @@ void write(const std::string& fn, T vec) {
 }
 
 void c2c(int nx, int ny, int nz, int direction, const std::string& fn) {
+  assert(nx > 0 && ny > 0 && nz > 0 && "nx, ny, nz need to be greater than 0");
   size_t elements = nx * ny * nz;
+
   thrust::host_vector< cufftComplex > h_in_signal(elements);
   for (size_t i = 0; i < elements; ++i) {
     h_in_signal[i] = cufftComplex{my_rand(), my_rand()};
@@ -108,6 +110,9 @@ void c2c(int nx, int ny, int nz, int direction, const std::string& fn) {
   }
   else if (ny != 1 && nz != 1) {
     CHECK(cufftPlan3d(&plan, nx, ny, nz, CUFFT_C2C));
+  }
+  else {
+    assert(!"should not be here");
   }
 
   auto* d_in_ptr = reinterpret_cast<cufftComplex *>(thrust::raw_pointer_cast(d_in_signal.data()));
