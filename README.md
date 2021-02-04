@@ -17,12 +17,12 @@ $ make install
 ```
 3. build the sample (fft.cu)
 ```sh
-$ GFLAGS=<path to gflags> make
+$ GFLAGS=<path to installed gflags> make
 ```
 
 # run #
 ```sh
-  Flags from fft.cu:
+    -batch_size (The batch size for 1D FFT) type: int32 default: 1
     -device_id (The device ID) type: int32 default: 0
     -nx (The transform size in the x dimension) type: int32 default: 64
     -ny (The transform size in the y dimension) type: int32 default: 64
