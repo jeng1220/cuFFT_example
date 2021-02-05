@@ -26,7 +26,7 @@ std::vector<float> read_bin(std::string fn) {
   assert(is && "invalid file name");
 
   is.seekg (0, is.end);
-  int length = is.tellg();
+  size_t length = is.tellg();
   is.seekg (0, is.beg);
 
   std::vector<float> buf(length/sizeof(float));
