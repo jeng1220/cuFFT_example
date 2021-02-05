@@ -40,6 +40,8 @@ void check(cufftResult err, int line) {
     }
 }
 
+#define CHECK(x) check((x), __LINE__)
+
 std::string remove_space(char *str) {
     char *ix = str;
     int n = 0;
@@ -65,8 +67,6 @@ float my_rand() {
   return static_cast<float>(rand()) / RAND_MAX;
 #endif
 }
-
-#define CHECK(x) check((x), __LINE__)
 
 template <typename T>
 void write(const std::string& fn, T vec) {
